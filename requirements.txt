@@ -50,5 +50,7 @@ urllib3==2.6.3
 vine==5.1.0
 wcwidth==0.6.0
 whitenoise==6.7.0
+gunicorn==22.0.0
+psycopg2-binary==2.9.10
 PyMuPDF==1.24.0
 openai>=1.0.0
