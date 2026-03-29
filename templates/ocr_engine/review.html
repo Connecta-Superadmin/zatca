@@ -1,0 +1,177 @@
+<!-- templates/ocr_engine/review.html -->
+{% extends 'base.html' %}
+{% block title %}Review Extracted Data{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Invoice Image (Left Side) -->
+    <div class="col-md-5">
+        <div class="card p-3" style="position: sticky; top: 20px;">
+            <h5><i class="bi bi-image"></i> Original Invoice</h5>
+            {% if invoice.file_type == 'application/pdf' %}
+                <div class="text-center p-4 bg-light rounded">
+                    <i class="bi bi-file-earmark-pdf fs-1 text-danger"></i>
+                    <p>PDF Document</p>
+                    <a href="{{ invoice.image.url }}" target="_blank" class="btn btn-outline-primary btn-sm">Open PDF</a>
+                </div>
+            {% else %}
+                <img src="{{ invoice.image.url }}" class="img-fluid rounded" alt="Invoice">
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Extracted Data (Right Side) -->
+    <div class="col-md-7">
+        
+        <!-- Confidence Score Bar -->
+        <div class="card p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0"><i class="bi bi-robot"></i> AI Extracted Data</h5>
+                {% widthratio ocr.overall_confidence 1 100 as confidence_pct %}
+                <span class="badge fs-6 {% if ocr.overall_confidence >= 0.8 %}bg-success{% elif ocr.overall_confidence >= 0.5 %}bg-warning{% else %}bg-danger{% endif %}">
+                    {{ confidence_pct }}% Confidence
+                </span>
+            </div>
+            <div class="progress" style="height: 8px;">
+                <div class="progress-bar {% if ocr.overall_confidence >= 0.8 %}bg-success{% elif ocr.overall_confidence >= 0.5 %}bg-warning{% else %}bg-danger{% endif %}" 
+                     style="width: {{ confidence_pct }}%"></div>
+            </div>
+            <small class="text-muted mt-1">⚠️ Please verify all extracted fields before approving.</small>
+        </div>
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Vendor / Buyer Info -->
+            <div class="card p-3 mb-3">
+                <h6 class="text-primary fw-bold"><i class="bi bi-building"></i> Vendor / Buyer Information</h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Vendor Name</label>
+                        <input type="text" name="vendor_name" value="{{ ocr.vendor_name }}" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Vendor VAT Number</label>
+                        <input type="text" name="vendor_vat" value="{{ ocr.vendor_vat }}" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Buyer/Customer Name</label>
+                        <input type="text" name="buyer_name" value="{{ ocr.buyer_name }}" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Buyer VAT Number</label>
+                        <input type="text" name="buyer_vat" value="{{ ocr.buyer_vat }}" class="form-control">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Invoice Details -->
+            <div class="card p-3 mb-3">
+                <h6 class="text-primary fw-bold"><i class="bi bi-receipt"></i> Invoice Details</h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Invoice Number</label>
+                        <input type="text" name="invoice_number" value="{{ ocr.invoice_number }}" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label small fw-bold">Invoice Date</label>
+                        <input type="date" name="invoice_date" value="{{ ocr.invoice_date|date:'Y-m-d' }}" class="form-control">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Line Items Table -->
+            <div class="card p-3 mb-3">
+                <h6 class="text-primary fw-bold"><i class="bi bi-list-ol"></i> Line Items ({{ line_items|length }} items)</h6>
+                {% if line_items %}
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>#</th>
+                                <th>Code</th>
+                                <th>Description</th>
+                                <th class="text-center">Qty</th>
+                                <th class="text-end">Unit Price</th>
+                                <th class="text-end">Tax</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in line_items %}
+                            <tr>
+                                <td>{{ item.item_number|default:forloop.counter }}</td>
+                                <td><small>{{ item.product_code|default:"-" }}</small></td>
+                                <td>
+                                    {{ item.description }}
+                                    {% if item.description_english %}
+                                    <br><small class="text-muted">{{ item.description_english }}</small>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">{{ item.quantity }}</td>
+                                <td class="text-end">{{ item.unit_price }}</td>
+                                <td class="text-end">{{ item.tax_amount|default:"0.00" }}</td>
+                                <td class="text-end fw-bold">{{ item.total|default:"0.00" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <p class="text-muted">No line items extracted.</p>
+                {% endif %}
+            </div>
+            
+            <!-- Amounts -->
+            <div class="card p-3 mb-3">
+                <h6 class="text-primary fw-bold"><i class="bi bi-cash-stack"></i> Amounts</h6>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Subtotal (excl. VAT)</label>
+                        <input type="number" step="0.01" name="subtotal" value="{{ ocr.subtotal }}" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">VAT Amount (15%)</label>
+                        <input type="number" step="0.01" name="vat_amount" value="{{ ocr.vat_amount }}" class="form-control">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Total Amount</label>
+                        <input type="number" step="0.01" name="total_amount" value="{{ ocr.total_amount }}" class="form-control fw-bold fs-5 text-success">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ZATCA Info -->
+            {% if ocr.qr_code_data %}
+            <div class="card p-3 mb-3">
+                <h6 class="text-primary fw-bold"><i class="bi bi-qr-code"></i> ZATCA Information</h6>
+                <div class="row">
+                    {% for key, value in ocr.qr_code_data.items %}
+                    <div class="col-md-6 mb-2">
+                        <small class="text-muted">{{ key }}</small><br>
+                        <strong>{{ value }}</strong>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Action Buttons -->
+            <div class="d-flex gap-2 mb-4 flex-wrap">
+                <button type="submit" class="btn btn-success btn-lg flex-grow-1">
+                    <i class="bi bi-check-circle"></i> Approve & Save Data
+                </button>
+                <a href="{% url 'odoo_integration:sync' invoice.id %}" class="btn btn-primary btn-lg">
+                    <i class="bi bi-cloud-upload"></i> Send to Odoo
+                </a>
+                <a href="{% url 'ocr_engine:process' invoice.id %}" class="btn btn-outline-warning btn-lg">
+                    <i class="bi bi-arrow-clockwise"></i> Re-Extract
+                </a>
+                <a href="{% url 'invoices:detail' invoice.pk %}" class="btn btn-outline-secondary btn-lg">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

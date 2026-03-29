@@ -1,0 +1,132 @@
+<!-- templates/odoo_integration/sync_confirm.html -->
+{% extends 'base.html' %}
+{% block title %}Send to Odoo - Invoice{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-cloud-upload"></i> Send Invoice to Odoo</h5>
+            </div>
+            <div class="card-body">
+                
+                {% if existing_sync %}
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Already synced!</strong> This invoice was synced to Odoo as 
+                    <strong>{{ existing_sync.odoo_invoice_name }}</strong> on {{ existing_sync.created_at|date:"d M Y H:i" }}.
+                    <br>
+                    <a href="{{ existing_sync.odoo_url }}" target="_blank" class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="bi bi-box-arrow-up-right"></i> Open in Odoo
+                    </a>
+                </div>
+                {% endif %}
+                
+                <!-- Invoice Preview -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Invoice Info</h6>
+                        <table class="table table-sm">
+                            <tr><th>Reference</th><td>INV-{{ invoice.reference_id|truncatechars:12 }}</td></tr>
+                            <tr><th>Vendor</th><td>{{ ocr_data.vendor_name|default:"-" }}</td></tr>
+                            <tr><th>Invoice #</th><td>{{ ocr_data.invoice_number|default:"-" }}</td></tr>
+                            <tr><th>Date</th><td>{{ ocr_data.invoice_date|default:"-" }}</td></tr>
+                            <tr><th>Total</th><td class="fw-bold text-success">{{ ocr_data.total_amount|default:"0.00" }}</td></tr>
+                        </table>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted">Line Items ({{ ocr_data.line_items|length }})</h6>
+                        {% if ocr_data.line_items %}
+                        <ul class="list-group list-group-flush small">
+                            {% for item in ocr_data.line_items|slice:":5" %}
+                            <li class="list-group-item px-0 py-1">
+                                {{ item.description|truncatechars:30 }} × {{ item.quantity }}
+                            </li>
+                            {% endfor %}
+                            {% if ocr_data.line_items|length > 5 %}
+                            <li class="list-group-item px-0 py-1 text-muted">
+                                ... and {{ ocr_data.line_items|length|add:"-5" }} more
+                            </li>
+                            {% endif %}
+                        </ul>
+                        {% else %}
+                        <p class="text-muted small">No line items</p>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Sync Form -->
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Invoice Type in Odoo:</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="invoice_type" 
+                                   id="type_customer" value="out_invoice" checked>
+                            <label class="form-check-label" for="type_customer">
+                                <i class="bi bi-receipt text-success"></i> 
+                                <strong>Customer Invoice</strong> (Sales Invoice)
+                                <br><small class="text-muted">Invoice sent TO your customer</small>
+                            </label>
+                        </div>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="radio" name="invoice_type" 
+                                   id="type_vendor" value="in_invoice">
+                            <label class="form-check-label" for="type_vendor">
+                                <i class="bi bi-file-earmark-text text-warning"></i>
+                                <strong>Vendor Bill</strong> (Purchase Invoice)
+                                <br><small class="text-muted">Invoice received FROM a supplier</small>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg flex-grow-1">
+                            <i class="bi bi-cloud-upload"></i> Send to Odoo
+                        </button>
+                        <a href="{% url 'invoices:detail' invoice.pk %}" class="btn btn-outline-secondary btn-lg">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+                
+                <!-- Sync History -->
+                {% if sync_history %}
+                <hr class="my-4">
+                <h6 class="text-muted">Sync History</h6>
+                <table class="table table-sm small">
+                    <thead>
+                        <tr><th>Date</th><th>Type</th><th>Status</th><th>Odoo Ref</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for sync in sync_history %}
+                        <tr>
+                            <td>{{ sync.created_at|date:"d/m/Y H:i" }}</td>
+                            <td>{{ sync.get_invoice_type_display }}</td>
+                            <td>
+                                {% if sync.status == 'synced' %}
+                                <span class="badge bg-success">Synced</span>
+                                {% elif sync.status == 'failed' %}
+                                <span class="badge bg-danger" title="{{ sync.error_message }}">Failed</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{{ sync.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if sync.odoo_invoice_name %}
+                                <a href="{{ sync.odoo_url }}" target="_blank">{{ sync.odoo_invoice_name }}</a>
+                                {% else %}-{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% endif %}
+                
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,111 @@
+<!-- templates/invoices/list.html -->
+{% extends 'base.html' %}
+{% block title %}Invoices{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3><i class="bi bi-receipt"></i> Invoices</h3>
+    {% if user.can_upload %}
+    <a href="{% url 'invoices:upload' %}" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Upload New
+    </a>
+    {% endif %}
+</div>
+
+<!-- Filters -->
+<div class="card p-3 mb-4">
+    <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label small">Type</label>
+            <select name="type" class="form-select form-select-sm">
+                <option value="">All Types</option>
+                {% for value, label in type_choices %}
+                <option value="{{ value }}" {% if current_type == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small">Status</label>
+            <select name="status" class="form-select form-select-sm">
+                <option value="">All Statuses</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if current_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label small">Search</label>
+            <input type="text" name="search" class="form-control form-control-sm" 
+                   value="{{ search }}" placeholder="Search by filename or reference...">
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+        </div>
+    </form>
+</div>
+
+<!-- Invoice Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Reference</th>
+                    <th>Filename</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Uploaded By</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for invoice in invoices %}
+                <tr>
+                    <td><code>INV-{{ invoice.reference_id|truncatechars:12 }}</code></td>
+                    <td>{{ invoice.original_filename|truncatechars:30 }}</td>
+                    <td>
+                        <span class="badge badge-{{ invoice.invoice_type }}">
+                            {{ invoice.get_invoice_type_display }}
+                        </span>
+                    </td>
+                    <td><span class="badge bg-info">{{ invoice.get_status_display }}</span></td>
+                    <td>{{ invoice.uploaded_by.username }}</td>
+                    <td>{{ invoice.created_at|date:"d M Y H:i" }}</td>
+                    <td>
+                        <a href="{% url 'invoices:detail' invoice.pk %}" class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-eye"></i> View
+                        </a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        No invoices found. <a href="{% url 'invoices:upload' %}">Upload your first invoice!</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if invoices.has_other_pages %}
+<nav class="mt-3">
+    <ul class="pagination justify-content-center">
+        {% if invoices.has_previous %}
+        <li class="page-item"><a class="page-link" href="?page={{ invoices.previous_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if search %}&search={{ search }}{% endif %}">Previous</a></li>
+        {% endif %}
+        {% for num in invoices.paginator.page_range %}
+        <li class="page-item {% if invoices.number == num %}active{% endif %}">
+            <a class="page-link" href="?page={{ num }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a>
+        </li>
+        {% endfor %}
+        {% if invoices.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ invoices.next_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_status %}&status={{ current_status }}{% endif %}{% if search %}&search={{ search }}{% endif %}">Next</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

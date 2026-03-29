@@ -1,0 +1,103 @@
+<!-- templates/odoo_integration/sync_history.html -->
+{% extends 'base.html' %}
+{% block title %}Odoo Sync History{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4><i class="bi bi-cloud-check"></i> Odoo Sync History</h4>
+    <a href="{% url 'odoo_integration:test_connection' %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-wifi"></i> Test Connection
+    </a>
+</div>
+
+<!-- Filters -->
+<div class="card p-3 mb-3">
+    <form method="get" class="row g-2 align-items-center">
+        <div class="col-auto">
+            <select name="status" class="form-select form-select-sm">
+                <option value="">All Statuses</option>
+                {% for value, label in status_choices %}
+                <option value="{{ value }}" {% if selected_status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-auto">
+            <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+        </div>
+    </form>
+</div>
+
+<!-- Sync Table -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th>Date</th>
+                    <th>Invoice</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Odoo Reference</th>
+                    <th>Synced By</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sync in syncs %}
+                <tr>
+                    <td>{{ sync.created_at|date:"d M Y H:i" }}</td>
+                    <td>
+                        <a href="{% url 'invoices:detail' sync.invoice.pk %}">
+                            INV-{{ sync.invoice.reference_id|truncatechars:8 }}
+                        </a>
+                    </td>
+                    <td>
+                        {% if sync.invoice_type == 'out_invoice' %}
+                        <span class="badge bg-success">Customer</span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">Vendor Bill</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if sync.status == 'synced' %}
+                        <span class="badge bg-success"><i class="bi bi-check"></i> Synced</span>
+                        {% elif sync.status == 'failed' %}
+                        <span class="badge bg-danger" title="{{ sync.error_message }}">
+                            <i class="bi bi-x"></i> Failed
+                        </span>
+                        {% else %}
+                        <span class="badge bg-secondary">{{ sync.get_status_display }}</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if sync.odoo_invoice_name %}
+                        <a href="{{ sync.odoo_url }}" target="_blank" class="text-decoration-none">
+                            {{ sync.odoo_invoice_name }}
+                            <i class="bi bi-box-arrow-up-right small"></i>
+                        </a>
+                        {% else %}
+                        <span class="text-muted">-</span>
+                        {% endif %}
+                    </td>
+                    <td>{{ sync.synced_by.username|default:"-" }}</td>
+                    <td>
+                        {% if sync.status == 'failed' %}
+                        <a href="{% url 'odoo_integration:sync' sync.invoice.pk %}" 
+                           class="btn btn-sm btn-outline-primary">
+                            <i class="bi bi-arrow-repeat"></i> Retry
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" class="text-center text-muted py-4">
+                        No sync records found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

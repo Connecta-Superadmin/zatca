@@ -1,0 +1,287 @@
+<!-- templates/invoices/upload.html -->
+{% extends 'base.html' %}
+{% block title %}Upload Invoice{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card p-4">
+            <h3 class="mb-4">
+                <i class="bi bi-cloud-upload text-primary"></i> Upload Invoice
+            </h3>
+
+            <!-- Upload Mode Tabs -->
+            <ul class="nav nav-tabs mb-4" id="uploadTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="single-tab" data-bs-toggle="tab" 
+                            data-bs-target="#singleUpload" type="button" role="tab">
+                        <i class="bi bi-file-earmark-image"></i> Single Upload
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="bulk-tab" data-bs-toggle="tab" 
+                            data-bs-target="#bulkUpload" type="button" role="tab">
+                        <i class="bi bi-files"></i> Bulk Upload
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="uploadTabContent">
+                <!-- ==================== SINGLE UPLOAD TAB ==================== -->
+                <div class="tab-pane fade show active" id="singleUpload" role="tabpanel">
+                    <form method="post" enctype="multipart/form-data" id="uploadForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="upload_mode" value="single">
+
+                        <!-- Step 1: Select Invoice Type -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                Step 1: Invoice Type <span class="text-danger">*</span>
+                            </label>
+                            <p class="text-muted small">You must classify the invoice before uploading.</p>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <input type="radio" class="btn-check" name="invoice_type" 
+                                           id="type_purchase" value="purchase" required>
+                                    <label class="btn btn-outline-danger w-100 p-3" for="type_purchase">
+                                        <i class="bi bi-cart-fill d-block fs-3 mb-1"></i>
+                                        Purchase Invoice
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="radio" class="btn-check" name="invoice_type" 
+                                           id="type_sales" value="sales" required>
+                                    <label class="btn btn-outline-success w-100 p-3" for="type_sales">
+                                        <i class="bi bi-cash-stack d-block fs-3 mb-1"></i>
+                                        Sales Invoice
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="radio" class="btn-check" name="invoice_type" 
+                                           id="type_other" value="other" required>
+                                    <label class="btn btn-outline-warning w-100 p-3" for="type_other">
+                                        <i class="bi bi-file-earmark d-block fs-3 mb-1"></i>
+                                        Other
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Upload File -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                Step 2: Upload Invoice Image <span class="text-danger">*</span>
+                            </label>
+                            <div class="border border-2 border-dashed rounded p-5 text-center" id="dropZone">
+                                <i class="bi bi-cloud-arrow-up fs-1 text-muted"></i>
+                                <p class="mt-2 mb-1">Drag & drop your invoice here</p>
+                                <p class="text-muted small">or click to browse</p>
+                                <input type="file" name="invoice_file" id="fileInput" 
+                                       accept=".jpg,.jpeg,.png,.pdf" class="d-none" required>
+                                <button type="button" class="btn btn-outline-primary btn-sm" 
+                                        onclick="document.getElementById('fileInput').click()">
+                                    Browse Files
+                                </button>
+                                <p class="text-muted small mt-2">Allowed: JPG, PNG, PDF (Max 10MB)</p>
+                                <div id="filePreview" class="mt-3" style="display:none;">
+                                    <img id="previewImg" class="img-fluid rounded" style="max-height:200px;">
+                                    <p id="fileName" class="mt-2 fw-bold"></p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Notes -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Notes (Optional)</label>
+                            <textarea name="notes" class="form-control" rows="2" 
+                                      placeholder="Any additional notes about this invoice..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-lg w-100">
+                            <i class="bi bi-upload"></i> Upload Invoice
+                        </button>
+                    </form>
+                </div>
+
+                <!-- ==================== BULK UPLOAD TAB ==================== -->
+                <div class="tab-pane fade" id="bulkUpload" role="tabpanel">
+                    <form method="post" enctype="multipart/form-data" id="bulkUploadForm">
+                        {% csrf_token %}
+                        <input type="hidden" name="upload_mode" value="bulk">
+
+                        <!-- Step 1: Select Invoice Type -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                Step 1: Invoice Type <span class="text-danger">*</span>
+                            </label>
+                            <p class="text-muted small">All uploaded invoices will be tagged with this type.</p>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <input type="radio" class="btn-check" name="invoice_type" 
+                                           id="bulk_type_purchase" value="purchase" required>
+                                    <label class="btn btn-outline-danger w-100 p-3" for="bulk_type_purchase">
+                                        <i class="bi bi-cart-fill d-block fs-3 mb-1"></i>
+                                        Purchase Invoice
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="radio" class="btn-check" name="invoice_type" 
+                                           id="bulk_type_sales" value="sales" required>
+                                    <label class="btn btn-outline-success w-100 p-3" for="bulk_type_sales">
+                                        <i class="bi bi-cash-stack d-block fs-3 mb-1"></i>
+                                        Sales Invoice
+                                    </label>
+                                </div>
+                                <div class="col-md-4">
+                                    <input type="radio" class="btn-check" name="invoice_type" 
+                                           id="bulk_type_other" value="other" required>
+                                    <label class="btn btn-outline-warning w-100 p-3" for="bulk_type_other">
+                                        <i class="bi bi-file-earmark d-block fs-3 mb-1"></i>
+                                        Other
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Upload Multiple Files -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                Step 2: Select Invoice Images <span class="text-danger">*</span>
+                            </label>
+                            <div class="border border-2 border-dashed rounded p-5 text-center" id="bulkDropZone">
+                                <i class="bi bi-cloud-arrow-up fs-1 text-muted"></i>
+                                <p class="mt-2 mb-1">Drag & drop multiple invoices here</p>
+                                <p class="text-muted small">or click to browse and select multiple files</p>
+                                <input type="file" name="invoice_files" id="bulkFileInput" 
+                                       accept=".jpg,.jpeg,.png,.pdf" class="d-none" multiple required>
+                                <button type="button" class="btn btn-outline-primary btn-sm" 
+                                        onclick="document.getElementById('bulkFileInput').click()">
+                                    Browse Files
+                                </button>
+                                <p class="text-muted small mt-2">Allowed: JPG, PNG, PDF (Max 10MB each)</p>
+                            </div>
+                            <!-- Bulk file list preview -->
+                            <div id="bulkFileList" class="mt-3" style="display:none;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold"><i class="bi bi-list-check"></i> Selected Files 
+                                        (<span id="bulkFileCount">0</span>)
+                                    </span>
+                                    <button type="button" class="btn btn-outline-danger btn-sm" id="clearBulkFiles">
+                                        <i class="bi bi-x-lg"></i> Clear All
+                                    </button>
+                                </div>
+                                <div id="bulkFileItems" class="list-group list-group-flush" 
+                                     style="max-height: 300px; overflow-y: auto;"></div>
+                                <div class="mt-2 text-muted small">
+                                    Total size: <span id="bulkTotalSize">0</span> MB
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Notes -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Notes (Optional)</label>
+                            <textarea name="notes" class="form-control" rows="2" 
+                                      placeholder="Notes for all invoices in this batch..."></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-success btn-lg w-100" id="bulkSubmitBtn">
+                            <i class="bi bi-upload"></i> Upload All Invoices
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // ============ SINGLE UPLOAD ============
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            document.getElementById('fileName').textContent = 
+                `${file.name} (${(file.size/1024/1024).toFixed(2)} MB)`;
+            document.getElementById('filePreview').style.display = 'block';
+            
+            if (file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewImg').src = e.target.result;
+                    document.getElementById('previewImg').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                document.getElementById('previewImg').style.display = 'none';
+            }
+        }
+    });
+    
+    // Single drag and drop
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-primary'); });
+    dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-primary'); });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-primary');
+        document.getElementById('fileInput').files = e.dataTransfer.files;
+        document.getElementById('fileInput').dispatchEvent(new Event('change'));
+    });
+
+    // ============ BULK UPLOAD ============
+    const bulkFileInput = document.getElementById('bulkFileInput');
+    const bulkFileList = document.getElementById('bulkFileList');
+    const bulkFileItems = document.getElementById('bulkFileItems');
+    const bulkFileCount = document.getElementById('bulkFileCount');
+    const bulkTotalSize = document.getElementById('bulkTotalSize');
+
+    bulkFileInput.addEventListener('change', function() {
+        renderBulkFileList(this.files);
+    });
+
+    function renderBulkFileList(files) {
+        bulkFileItems.innerHTML = '';
+        if (files.length === 0) {
+            bulkFileList.style.display = 'none';
+            return;
+        }
+        bulkFileList.style.display = 'block';
+        bulkFileCount.textContent = files.length;
+        let totalSize = 0;
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            totalSize += file.size;
+            const icon = file.type === 'application/pdf' ? 'bi-file-earmark-pdf text-danger' : 'bi-file-earmark-image text-primary';
+            const item = document.createElement('div');
+            item.className = 'list-group-item d-flex justify-content-between align-items-center py-2';
+            item.innerHTML = `
+                <span><i class="bi ${icon} me-2"></i>${file.name}</span>
+                <span class="badge bg-secondary">${(file.size/1024/1024).toFixed(2)} MB</span>
+            `;
+            bulkFileItems.appendChild(item);
+        }
+        bulkTotalSize.textContent = (totalSize / 1024 / 1024).toFixed(2);
+    }
+
+    // Clear bulk files
+    document.getElementById('clearBulkFiles').addEventListener('click', function() {
+        bulkFileInput.value = '';
+        bulkFileList.style.display = 'none';
+        bulkFileItems.innerHTML = '';
+    });
+
+    // Bulk drag and drop
+    const bulkDropZone = document.getElementById('bulkDropZone');
+    bulkDropZone.addEventListener('dragover', (e) => { e.preventDefault(); bulkDropZone.classList.add('border-primary'); });
+    bulkDropZone.addEventListener('dragleave', () => { bulkDropZone.classList.remove('border-primary'); });
+    bulkDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        bulkDropZone.classList.remove('border-primary');
+        bulkFileInput.files = e.dataTransfer.files;
+        renderBulkFileList(e.dataTransfer.files);
+    });
+</script>
+{% endblock %}
